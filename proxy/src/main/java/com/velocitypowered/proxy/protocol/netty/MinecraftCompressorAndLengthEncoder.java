@@ -32,6 +32,13 @@ import java.util.zip.DataFormatException;
  */
 public class MinecraftCompressorAndLengthEncoder extends MessageToByteEncoder<ByteBuf> {
 
+  private static final int VANILLA_MAXIMUM_COMPRESSED_SIZE = 8 * 1024 * 1024; // 8MiB
+  private static final int HARD_MAXIMUM_COMPRESSED_SIZE = Integer.MAX_VALUE;
+
+  private static final int CLIENTBOUND_COMPRESSED_CAP =
+      Boolean.getBoolean("velocity.increased-compression-cap")
+          ? HARD_MAXIMUM_COMPRESSED_SIZE : VANILLA_MAXIMUM_COMPRESSED_SIZE;
+
   private int threshold;
   private final VelocityCompressor compressor;
 
@@ -68,8 +75,9 @@ public class MinecraftCompressorAndLengthEncoder extends MessageToByteEncoder<By
       compatibleIn.release();
     }
     int compressedLength = out.writerIndex() - startCompressed;
-    if (compressedLength >= 1 << 21) {
-      throw new DataFormatException("The server sent a very large (over 2MiB compressed) packet.");
+    if (compressedLength >= CLIENTBOUND_COMPRESSED_CAP) {
+      throw new DataFormatException("The server sent a very large (over "
+          + CLIENTBOUND_COMPRESSED_CAP + " byte) compressed packet.");
     }
 
     int packetLength = out.readableBytes() - 3;
@@ -77,8 +85,7 @@ public class MinecraftCompressorAndLengthEncoder extends MessageToByteEncoder<By
   }
 
   @Override
-  protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg, boolean preferDirect)
-      throws Exception {
+  protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg, boolean preferDirect) {
     int uncompressed = msg.readableBytes();
     if (uncompressed < threshold) {
       int finalBufferSize = uncompressed + 1;
@@ -94,7 +101,7 @@ public class MinecraftCompressorAndLengthEncoder extends MessageToByteEncoder<By
   }
 
   @Override
-  public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+  public void handlerRemoved(ChannelHandlerContext ctx) {
     compressor.close();
   }
 
