@@ -32,12 +32,12 @@ import java.util.zip.DataFormatException;
  */
 public class MinecraftCompressorAndLengthEncoder extends MessageToByteEncoder<ByteBuf> {
 
-  private static final int VANILLA_MAXIMUM_COMPRESSED_SIZE = 8 * 1024 * 1024; // 8MiB
-  private static final int HARD_MAXIMUM_COMPRESSED_SIZE = Integer.MAX_VALUE;
+  private static final int VANILLA_MAXIMUM_PACKET_SIZE = 1 << 21; // 2MiB
+  private static final int HARD_MAXIMUM_PACKET_SIZE = Integer.MAX_VALUE;
 
-  private static final int CLIENTBOUND_COMPRESSED_CAP =
+  private static final int CLIENTBOUND_PACKET_CAP =
       Boolean.getBoolean("velocity.increased-compression-cap")
-          ? HARD_MAXIMUM_COMPRESSED_SIZE : VANILLA_MAXIMUM_COMPRESSED_SIZE;
+          ? HARD_MAXIMUM_PACKET_SIZE : VANILLA_MAXIMUM_PACKET_SIZE;
 
   private int threshold;
   private final VelocityCompressor compressor;
@@ -64,24 +64,29 @@ public class MinecraftCompressorAndLengthEncoder extends MessageToByteEncoder<By
       throws DataFormatException {
     int uncompressed = msg.readableBytes();
 
-    out.writeMedium(0); // Reserve the packet length
-    ProtocolUtils.writeVarInt(out, uncompressed);
-    ByteBuf compatibleIn = MoreByteBufUtils.ensureCompatible(ctx.alloc(), compressor, msg);
-
-    int startCompressed = out.writerIndex();
+    // Write compressed payload to a temporary buffer
+    int estimatedSize = uncompressed + ProtocolUtils.varIntBytes(uncompressed);
+    ByteBuf payload = MoreByteBufUtils.preferredBuffer(ctx.alloc(), compressor, estimatedSize);
     try {
-      compressor.deflate(compatibleIn, out);
-    } finally {
-      compatibleIn.release();
-    }
-    int compressedLength = out.writerIndex() - startCompressed;
-    if (compressedLength >= CLIENTBOUND_COMPRESSED_CAP) {
-      throw new DataFormatException("The server sent a very large (over "
-          + CLIENTBOUND_COMPRESSED_CAP + " byte) compressed packet.");
-    }
+      ProtocolUtils.writeVarInt(payload, uncompressed);
+      ByteBuf compatibleIn = MoreByteBufUtils.ensureCompatible(ctx.alloc(), compressor, msg);
+      try {
+        compressor.deflate(compatibleIn, payload);
+      } finally {
+        compatibleIn.release();
+      }
 
-    int packetLength = out.readableBytes() - 3;
-    out.setMedium(0, ProtocolUtils.encode21BitVarInt(packetLength)); // Rewrite packet length
+      int payloadLength = payload.readableBytes();
+      if (payloadLength >= CLIENTBOUND_PACKET_CAP) {
+        throw new DataFormatException("The server sent a very large (over "
+            + CLIENTBOUND_PACKET_CAP + " byte) compressed packet.");
+      }
+
+      ProtocolUtils.writeVarInt(out, payloadLength);
+      out.writeBytes(payload);
+    } finally {
+      payload.release();
+    }
   }
 
   @Override
@@ -95,8 +100,8 @@ public class MinecraftCompressorAndLengthEncoder extends MessageToByteEncoder<By
           : ctx.alloc().directBuffer(finalBufferSize);
     }
 
-    // (maximum data length after compression) + packet length varint + uncompressed data varint
-    int initialBufferSize = (uncompressed - 1) + 3 + ProtocolUtils.varIntBytes(uncompressed);
+    // (maximum data length after compression) + max outer varint + uncompressed data varint
+    int initialBufferSize = (uncompressed - 1) + 5 + ProtocolUtils.varIntBytes(uncompressed);
     return MoreByteBufUtils.preferredBuffer(ctx.alloc(), compressor, initialBufferSize);
   }
 
