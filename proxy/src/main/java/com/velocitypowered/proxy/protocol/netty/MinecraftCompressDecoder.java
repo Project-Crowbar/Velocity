@@ -35,7 +35,7 @@ public class MinecraftCompressDecoder extends MessageToMessageDecoder<ByteBuf> {
 
   private static final int SERVERBOUND_MAXIMUM_UNCOMPRESSED_SIZE = 2 * 1024 * 1024; // 2MiB
   private static final int VANILLA_MAXIMUM_UNCOMPRESSED_SIZE = 8 * 1024 * 1024; // 8MiB
-  private static final int HARD_MAXIMUM_UNCOMPRESSED_SIZE = 128 * 1024 * 1024; // 128MiB
+  private static final int HARD_MAXIMUM_UNCOMPRESSED_SIZE = Integer.MAX_VALUE; // ~2GiB
 
   private static final int CLIENTBOUND_UNCOMPRESSED_CAP =
       Boolean.getBoolean("velocity.increased-compression-cap")
@@ -109,7 +109,7 @@ public class MinecraftCompressDecoder extends MessageToMessageDecoder<ByteBuf> {
   }
 
   @Override
-  public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+  public void handlerRemoved(ChannelHandlerContext ctx) {
     compressor.close();
   }
 

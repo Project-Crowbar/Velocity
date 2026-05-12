@@ -36,7 +36,7 @@ import org.apache.logging.log4j.Logger;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Frames Minecraft server packets which are prefixed by a 21-bit VarInt encoding.
+ * Frames Minecraft server packets which are prefixed by a VarInt encoding.
  */
 public class MinecraftVarintFrameDecoder extends ByteToMessageDecoder {
 
@@ -54,8 +54,7 @@ public class MinecraftVarintFrameDecoder extends ByteToMessageDecoder {
       new QuietDecoderException("Unknown packet");
 
   private final ProtocolUtils.Direction direction;
-  private final StateRegistry.PacketRegistry.ProtocolRegistry registry;
-  private StateRegistry state;
+    private StateRegistry state;
   @Nullable
   private PacketLimiter packetLimiter;
 
@@ -66,9 +65,9 @@ public class MinecraftVarintFrameDecoder extends ByteToMessageDecoder {
    */
   public MinecraftVarintFrameDecoder(ProtocolUtils.Direction direction) {
     this.direction = direction;
-    this.registry = StateRegistry.HANDSHAKE.getProtocolRegistry(
-        direction, ProtocolVersion.MINIMUM_VERSION);
-    this.state = StateRegistry.HANDSHAKE;
+      StateRegistry.HANDSHAKE.getProtocolRegistry(
+              direction, ProtocolVersion.MINIMUM_VERSION);
+      this.state = StateRegistry.HANDSHAKE;
   }
 
   @Override
@@ -95,7 +94,7 @@ public class MinecraftVarintFrameDecoder extends ByteToMessageDecoder {
 
     // try to read the length of the packet
     try {
-      int length = readRawVarInt21(in);
+      int length = readRawVarInt(in);
       if (packetStart == in.readerIndex()) {
         return;
       }
@@ -140,7 +139,7 @@ public class MinecraftVarintFrameDecoder extends ByteToMessageDecoder {
         state.getProtocolRegistry(direction, ProtocolVersion.MINIMUM_VERSION);
 
     final int index = in.readerIndex();
-    final int packetId = readRawVarInt21(in);
+    final int packetId = readRawVarInt(in);
     // Index hasn't changed, we've read nothing
     if (index == in.readerIndex()) {
       return true;
@@ -180,73 +179,31 @@ public class MinecraftVarintFrameDecoder extends ByteToMessageDecoder {
   }
 
   /**
-   * Reads a VarInt from the buffer of up to 21 bits in size.
+   * Reads a full VarInt from the buffer (up to 5 bytes / 32 bits).
    *
    * @param buffer the buffer to read from
    * @return the VarInt decoded, {@code 0} if no varint could be read
    * @throws QuietDecoderException if the VarInt is too big to be decoded
    */
-  private static int readRawVarInt21(ByteBuf buffer) {
-    if (buffer.readableBytes() < 4) {
-      // we don't have enough that we can read a potentially full varint, so fall back to
-      // the slow path.
-      return readRawVarintSmallBuf(buffer);
-    }
-    int wholeOrMore = buffer.getIntLE(buffer.readerIndex());
-
-    // take the last three bytes and check if any of them have the high bit set
-    int atStop = ~wholeOrMore & 0x808080;
-    if (atStop == 0) {
-      // all bytes have the high bit set, so the varint we are trying to decode is too wide
-      throw VARINT_TOO_BIG;
-    }
-
-    int bitsToKeep = Integer.numberOfTrailingZeros(atStop) + 1;
-    buffer.skipBytes(bitsToKeep >> 3);
-
-    // remove all bits we don't need to keep, a trick from
-    // https://github.com/netty/netty/pull/14050#issuecomment-2107750734:
-    //
-    // > The idea is that thisVarintMask has 0s above the first one of firstOneOnStop, and 1s at
-    // > and below it. For example if firstOneOnStop is 0x800080 (where the last 0x80 is the only
-    // > one that matters), then thisVarintMask is 0xFF.
-    //
-    // this is also documented in Hacker's Delight, section 2-1 "Manipulating Rightmost Bits"
-    int preservedBytes = wholeOrMore & (atStop ^ (atStop - 1));
-
-    // merge together using this trick: https://github.com/netty/netty/pull/14050#discussion_r1597896639
-    preservedBytes = (preservedBytes & 0x007F007F) | ((preservedBytes & 0x00007F00) >> 1);
-    preservedBytes = (preservedBytes & 0x00003FFF) | ((preservedBytes & 0x3FFF0000) >> 2);
-    return preservedBytes;
-  }
-
-  private static int readRawVarintSmallBuf(ByteBuf buffer) {
+  private static int readRawVarInt(ByteBuf buffer) {
     if (!buffer.isReadable()) {
       return 0;
     }
     buffer.markReaderIndex();
 
-    byte tmp = buffer.readByte();
-    if (tmp >= 0) {
-      return tmp;
+    int result = 0;
+    for (int shift = 0; shift < 35; shift += 7) {
+      if (!buffer.isReadable()) {
+        buffer.resetReaderIndex();
+        return 0;
+      }
+      byte b = buffer.readByte();
+      result |= (b & 0x7F) << shift;
+      if ((b & 0x80) == 0) {
+        return result;
+      }
     }
-    int result = tmp & 0x7F;
-    if (!buffer.isReadable()) {
-      buffer.resetReaderIndex();
-      return 0;
-    }
-    if ((tmp = buffer.readByte()) >= 0) {
-      return result | tmp << 7;
-    }
-    result |= (tmp & 0x7F) << 7;
-    if (!buffer.isReadable()) {
-      buffer.resetReaderIndex();
-      return 0;
-    }
-    if ((tmp = buffer.readByte()) >= 0) {
-      return result | tmp << 14;
-    }
-    return result | (tmp & 0x7F) << 14;
+    throw VARINT_TOO_BIG;
   }
 
   private Exception handleOverflow(MinecraftPacket packet, int expected, int actual) {
