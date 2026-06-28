@@ -27,6 +27,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.CorruptedFrameException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Decodes Minecraft packets.
@@ -34,6 +36,9 @@ import io.netty.handler.codec.CorruptedFrameException;
 public class MinecraftDecoder extends ChannelInboundHandlerAdapter {
 
   public static final boolean DEBUG = Boolean.getBoolean("velocity.packet-decode-logging");
+  private static final boolean PACKET_LOGGING = Boolean.getBoolean("velocity.packet-logging");
+  private static final Logger LOGGER = LogManager.getLogger(MinecraftDecoder.class);
+
   private static final QuietRuntimeException DECODE_FAILED =
       new QuietRuntimeException("A packet did not decode successfully (invalid data). For more "
           + "information, launch Velocity with -Dvelocity.packet-decode-logging=true to see more.");
@@ -75,6 +80,11 @@ public class MinecraftDecoder extends ChannelInboundHandlerAdapter {
     int originalReaderIndex = buf.readerIndex();
     int packetId = ProtocolUtils.readVarInt(buf);
     MinecraftPacket packet = this.registry.createPacket(packetId);
+    if (PACKET_LOGGING) {
+      LOGGER.info("[{}] Received packet {} with ID 0x{} from {} (State: {}, Version: {})",
+          ctx.channel().remoteAddress(), (packet != null ? packet.getClass().getSimpleName() : "Unknown"),
+          Integer.toHexString(packetId), direction, state, registry.version);
+    }
     if (packet == null) {
       buf.readerIndex(originalReaderIndex);
       if (this.direction == ProtocolUtils.Direction.SERVERBOUND && this.state != StateRegistry.PLAY) {

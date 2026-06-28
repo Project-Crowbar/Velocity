@@ -86,6 +86,10 @@ public enum TransportType {
     this.ioHandlerFactorySupplier = ioHandlerFactorySupplier;
   }
 
+  public boolean isReusePortSupported() {
+    return this == EPOLL || this == KQUEUE || this == IO_URING;
+  }
+
   @Override
   public String toString() {
     return this.name;

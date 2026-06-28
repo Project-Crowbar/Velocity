@@ -236,6 +236,9 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
   @Nullable
   public ChannelFuture write(Object msg) {
     if (channel.isActive()) {
+      if (MinecraftEncoder.DEBUG && msg instanceof ByteBuf buf) {
+        logRawPacket(buf);
+      }
       return channel.writeAndFlush(msg, channel.newPromise());
     } else {
       ReferenceCountUtil.release(msg);
@@ -250,6 +253,9 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
    */
   public void delayedWrite(Object msg) {
     if (channel.isActive()) {
+      if (MinecraftEncoder.DEBUG && msg instanceof ByteBuf buf) {
+        logRawPacket(buf);
+      }
       channel.write(msg, channel.voidPromise());
     } else {
       ReferenceCountUtil.release(msg);
@@ -281,11 +287,17 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
           this.setAutoReading(false);
           channel.eventLoop().schedule(() -> {
             knownDisconnect = true;
+            if (MinecraftEncoder.DEBUG && msg instanceof ByteBuf buf) {
+              logRawPacket(buf);
+            }
             channel.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
           }, 250, TimeUnit.MILLISECONDS);
         });
       } else {
         knownDisconnect = true;
+        if (MinecraftEncoder.DEBUG && msg instanceof ByteBuf buf) {
+          logRawPacket(buf);
+        }
         channel.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
       }
     }
@@ -315,6 +327,19 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
           channel.close();
         });
       }
+    }
+  }
+
+  private void logRawPacket(ByteBuf buf) {
+    int readerIndex = buf.readerIndex();
+    try {
+      int packetId = ProtocolUtils.readVarInt(buf);
+      logger.info("[{}] Sending raw packet with ID 0x{} (State: {}, Version: {})",
+          channel.remoteAddress(), Integer.toHexString(packetId), state, protocolVersion);
+    } catch (Exception e) {
+      // ignore
+    } finally {
+      buf.readerIndex(readerIndex);
     }
   }
 

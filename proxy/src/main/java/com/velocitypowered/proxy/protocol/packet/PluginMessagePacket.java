@@ -29,6 +29,7 @@ import io.netty.buffer.ByteBuf;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+// CustomPacketPayload
 public class PluginMessagePacket extends DeferredByteBufHolder implements MinecraftPacket {
 
   private static final int MAX_PAYLOAD_SIZE_CLIENTBOUND = getPayloadLimit(Direction.CLIENTBOUND);
@@ -54,15 +55,19 @@ public class PluginMessagePacket extends DeferredByteBufHolder implements Minecr
   }
 
   private static int getPayloadLimit(Direction direction) {
+    // Temp Fix
+
+    // TODO I need nikk to test this with packet debugging on in order to find what Ars Novueau is doing
+
     if (System.getProperty("velocity.max-plugin-message-payload-size") != null) {
       return Integer.getInteger("velocity.max-plugin-message-payload-size");
     }
     if (direction == Direction.SERVERBOUND) {
-      return Integer.getInteger("velocity.max-plugin-message-payload-size.serverbound", 32767);
+      return Integer.getInteger("velocity.max-plugin-message-payload-size.serverbound", 67108864); // original 32767
     } else {
       // This is the vanilla expected limit, a payload this large feels like a nightmare given the trust
       // we give to servers...
-      return Integer.getInteger("velocity.max-plugin-message-payload-size.clientbound", 1048576);
+      return Integer.getInteger("velocity.max-plugin-message-payload-size.clientbound", 67108864); // original 1048576
     }
   }
 

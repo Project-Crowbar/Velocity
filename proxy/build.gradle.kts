@@ -107,10 +107,14 @@ tasks {
         workingDir = file("run").also(File::mkdirs)
         standardInput = System.`in`
         jvmArgs("-Dvelocity.packet-decode-logging=true")
+        jvmArgs("-Dvelocity.max-known-packs=2097152","-Dvelocity.max-plugin-message-payload-size=67108864","-Dvelocity.increased-compression-cap=true","-Dvelocity.skip-uncompressed-packet-size-validation=true")
     }
     named<JavaExec>("run") {
         workingDir = file("run").also(File::mkdirs)
-        standardInput = System.`in` // Doesn't work?
+        standardInput = System.`in`
+        jvmArgs("-Dvelocity.packet-logging=true")
+        jvmArgs("-Dvelocity.packet-decode-logging=true")
+        jvmArgs("-Dvelocity.max-known-packs=2097152","-Dvelocity.max-plugin-message-payload-size=67108864","-Dvelocity.increased-compression-cap=true","-Dvelocity.skip-uncompressed-packet-size-validation=true")
     }
 }
 

@@ -18,6 +18,7 @@
 package com.velocitypowered.proxy.protocol.packet.config;
 
 import com.velocitypowered.api.network.ProtocolVersion;
+import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
 import com.velocitypowered.proxy.protocol.MinecraftPacket;
 import com.velocitypowered.proxy.protocol.ProtocolUtils;
@@ -27,9 +28,8 @@ import java.util.List;
 
 public class KnownPacksPacket implements MinecraftPacket {
 
-    private static final int MAX_LENGTH_PACKS = Integer.getInteger("velocity.max-known-packs", 64);
-    private static final QuietDecoderException TOO_MANY_PACKS =
-        new QuietDecoderException("too many known packs");
+    private static final int MAX_LENGTH_PACKS = Integer.getInteger("velocity.max-known-packs", 256); // Increased pack limit because of Moonlight Lib
+    private static final QuietDecoderException TOO_MANY_PACKS = new QuietDecoderException("too many known packs");
 
     private List<KnownPack> packs;
 
@@ -38,7 +38,7 @@ public class KnownPacksPacket implements MinecraftPacket {
                        ProtocolVersion protocolVersion) {
         final int packCount = ProtocolUtils.readVarInt(buf);
         if (direction == ProtocolUtils.Direction.SERVERBOUND && packCount > MAX_LENGTH_PACKS) {
-          throw TOO_MANY_PACKS;
+            throw TOO_MANY_PACKS;
         }
 
         final List<KnownPack> packs = ProtocolUtils.newList(packCount);

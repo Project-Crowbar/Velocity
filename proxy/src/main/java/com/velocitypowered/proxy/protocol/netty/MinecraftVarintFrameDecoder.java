@@ -54,7 +54,7 @@ public class MinecraftVarintFrameDecoder extends ByteToMessageDecoder {
       new QuietDecoderException("Unknown packet");
 
   private final ProtocolUtils.Direction direction;
-    private StateRegistry state;
+  private StateRegistry state;
   @Nullable
   private PacketLimiter packetLimiter;
 
@@ -65,14 +65,13 @@ public class MinecraftVarintFrameDecoder extends ByteToMessageDecoder {
    */
   public MinecraftVarintFrameDecoder(ProtocolUtils.Direction direction) {
     this.direction = direction;
-      StateRegistry.HANDSHAKE.getProtocolRegistry(
-              direction, ProtocolVersion.MINIMUM_VERSION);
-      this.state = StateRegistry.HANDSHAKE;
+    StateRegistry.HANDSHAKE.getProtocolRegistry(
+            direction, ProtocolVersion.MINIMUM_VERSION);
+    this.state = StateRegistry.HANDSHAKE;
   }
 
   @Override
-  protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
-      throws Exception {
+  protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
     if (!ctx.channel().isActive()) {
       in.clear();
       return;

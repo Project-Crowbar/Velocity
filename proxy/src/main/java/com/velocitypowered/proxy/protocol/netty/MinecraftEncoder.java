@@ -25,11 +25,16 @@ import com.velocitypowered.proxy.protocol.StateRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Encodes {@link MinecraftPacket} instances.
  */
 public class MinecraftEncoder extends MessageToByteEncoder<MinecraftPacket> {
+
+  public static final boolean DEBUG = Boolean.getBoolean("velocity.packet-logging");
+  private static final Logger LOGGER = LogManager.getLogger(MinecraftEncoder.class);
 
   private final ProtocolUtils.Direction direction;
   private StateRegistry state;
@@ -50,6 +55,11 @@ public class MinecraftEncoder extends MessageToByteEncoder<MinecraftPacket> {
   @Override
   protected void encode(ChannelHandlerContext ctx, MinecraftPacket msg, ByteBuf out) {
     int packetId = this.registry.getPacketId(msg);
+    if (DEBUG) {
+      LOGGER.info("[{}] Sending packet {} to {} with ID 0x{} (State: {}, Version: {})",
+          ctx.channel().remoteAddress(), msg.getClass().getSimpleName(), direction,
+          Integer.toHexString(packetId), state, registry.version);
+    }
     ProtocolUtils.writeVarInt(out, packetId);
     msg.encode(out, direction, registry.version);
   }
