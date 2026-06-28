@@ -22,6 +22,7 @@ import static com.velocitypowered.proxy.protocol.netty.MinecraftVarintLengthEnco
 import com.velocitypowered.natives.compression.VelocityCompressor;
 import com.velocitypowered.natives.util.MoreByteBufUtils;
 import com.velocitypowered.proxy.protocol.ProtocolUtils;
+import com.velocitypowered.proxy.util.VelocityProperties;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -36,7 +37,7 @@ public class MinecraftCompressorAndLengthEncoder extends MessageToByteEncoder<By
   private static final int HARD_MAXIMUM_PACKET_SIZE = Integer.MAX_VALUE;
 
   private static final int CLIENTBOUND_PACKET_CAP =
-      Boolean.getBoolean("velocity.increased-compression-cap")
+      VelocityProperties.readBoolean("velocity.increased-compression-cap", true)
           ? HARD_MAXIMUM_PACKET_SIZE : VANILLA_MAXIMUM_PACKET_SIZE;
 
   private int threshold;

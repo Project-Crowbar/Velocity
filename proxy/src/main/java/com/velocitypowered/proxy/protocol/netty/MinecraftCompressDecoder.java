@@ -24,6 +24,7 @@ import static com.velocitypowered.proxy.protocol.util.NettyPreconditions.checkFr
 import com.velocitypowered.natives.compression.VelocityCompressor;
 import com.velocitypowered.proxy.network.limiter.PacketLimiter;
 import com.velocitypowered.proxy.protocol.ProtocolUtils;
+import com.velocitypowered.proxy.util.VelocityProperties;
 import com.velocitypowered.proxy.util.except.QuietDecoderException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -41,12 +42,12 @@ public class MinecraftCompressDecoder extends MessageToMessageDecoder<ByteBuf> {
   private static final int HARD_MAXIMUM_UNCOMPRESSED_SIZE = Integer.MAX_VALUE; // ~2GiB
 
   private static final int CLIENTBOUND_UNCOMPRESSED_CAP =
-      Boolean.getBoolean("velocity.increased-compression-cap")
+      VelocityProperties.readBoolean("velocity.increased-compression-cap", true)
           ? HARD_MAXIMUM_UNCOMPRESSED_SIZE : VANILLA_MAXIMUM_UNCOMPRESSED_SIZE;
   private static final int SERVERBOUND_UNCOMPRESSED_CAP =
-          Boolean.getBoolean("velocity.increased-compression-cap")
+          VelocityProperties.readBoolean("velocity.increased-compression-cap", true)
                   ? HARD_MAXIMUM_UNCOMPRESSED_SIZE : SERVERBOUND_MAXIMUM_UNCOMPRESSED_SIZE;
-  private static final boolean SKIP_COMPRESSION_VALIDATION = Boolean.getBoolean("velocity.skip-uncompressed-packet-size-validation");
+  private static final boolean SKIP_COMPRESSION_VALIDATION = VelocityProperties.readBoolean("velocity.skip-uncompressed-packet-size-validation", true);
   private final ProtocolUtils.Direction direction;
 
   private int threshold;
