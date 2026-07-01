@@ -28,7 +28,7 @@ import java.util.List;
 
 public class KnownPacksPacket implements MinecraftPacket {
 
-    private static final int MAX_LENGTH_PACKS = Integer.getInteger("velocity.max-known-packs", 256); // Increased pack limit because of Moonlight Lib
+    private static final int MAX_LENGTH_PACKS = Integer.getInteger("velocity.max-known-packs", 4194304); // Increased pack limit because of Moonlight Lib
     private static final QuietDecoderException TOO_MANY_PACKS = new QuietDecoderException("too many known packs");
 
     private List<KnownPack> packs;

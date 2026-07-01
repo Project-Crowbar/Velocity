@@ -22,8 +22,10 @@ import com.velocitypowered.api.network.ProtocolVersion;
 import com.velocitypowered.proxy.protocol.MinecraftPacket;
 import com.velocitypowered.proxy.protocol.ProtocolUtils;
 import com.velocitypowered.proxy.protocol.StateRegistry;
+import com.velocitypowered.proxy.protocol.packet.PluginMessagePacket;
 import com.velocitypowered.proxy.util.except.QuietRuntimeException;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.CorruptedFrameException;
@@ -80,24 +82,32 @@ public class MinecraftDecoder extends ChannelInboundHandlerAdapter {
     int originalReaderIndex = buf.readerIndex();
     int packetId = ProtocolUtils.readVarInt(buf);
     MinecraftPacket packet = this.registry.createPacket(packetId);
-    if (PACKET_LOGGING) {
-      LOGGER.info("[{}] Received packet {} with ID 0x{} from {} (State: {}, Version: {})",
-          ctx.channel().remoteAddress(), (packet != null ? packet.getClass().getSimpleName() : "Unknown"),
-          Integer.toHexString(packetId), direction, state, registry.version);
-    }
     if (packet == null) {
+      if (PACKET_LOGGING) {
+        LOGGER.info("[{}] Received unknown packet with ID 0x{} from {} (State: {}, Version: {}) Data: {}",
+            ctx.channel().remoteAddress(), Integer.toHexString(packetId), direction, state, registry.version,
+            ByteBufUtil.hexDump(buf));
+      }
       buf.readerIndex(originalReaderIndex);
       if (this.direction == ProtocolUtils.Direction.SERVERBOUND && this.state != StateRegistry.PLAY) {
         throw this.handleInvalidPacketId(packetId);
       }
       ctx.fireChannelRead(buf.retain());
     } else {
-      doLengthSanityChecks(buf, packet);
+      if (!(packet instanceof PluginMessagePacket)) { // PluginMessagePacket wont be doing checks since its causing problems.
+        doLengthSanityChecks(buf, packet);
+      }
 
       try {
         packet.decode(buf, direction, registry.version);
       } catch (Exception e) {
         throw handleDecodeFailure(e, packet, packetId);
+      }
+
+      if (PACKET_LOGGING) {
+        LOGGER.info("[{}] Received packet {} with ID 0x{} from {} (State: {}, Version: {}) Decoded: {}",
+            ctx.channel().remoteAddress(), packet.getClass().getSimpleName(),
+            Integer.toHexString(packetId), direction, state, registry.version, packet);
       }
 
       if (buf.isReadable()) {

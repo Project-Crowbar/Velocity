@@ -63,11 +63,11 @@ public class PluginMessagePacket extends DeferredByteBufHolder implements Minecr
       return Integer.getInteger("velocity.max-plugin-message-payload-size");
     }
     if (direction == Direction.SERVERBOUND) {
-      return Integer.getInteger("velocity.max-plugin-message-payload-size.serverbound", 67108864); // original 32767
+      return Integer.getInteger("velocity.max-plugin-message-payload-size.serverbound", 12582912); // 12MB (original 32767)
     } else {
       // This is the vanilla expected limit, a payload this large feels like a nightmare given the trust
       // we give to servers...
-      return Integer.getInteger("velocity.max-plugin-message-payload-size.clientbound", 67108864); // original 1048576
+      return Integer.getInteger("velocity.max-plugin-message-payload-size.clientbound", 12582912); // 12MB (original 1048576)
     }
   }
 
