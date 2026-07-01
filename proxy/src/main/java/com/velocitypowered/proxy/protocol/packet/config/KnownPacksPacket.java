@@ -18,7 +18,6 @@
 package com.velocitypowered.proxy.protocol.packet.config;
 
 import com.velocitypowered.api.network.ProtocolVersion;
-import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
 import com.velocitypowered.proxy.protocol.MinecraftPacket;
 import com.velocitypowered.proxy.protocol.ProtocolUtils;

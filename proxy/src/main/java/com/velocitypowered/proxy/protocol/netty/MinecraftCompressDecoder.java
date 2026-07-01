@@ -47,7 +47,8 @@ public class MinecraftCompressDecoder extends MessageToMessageDecoder<ByteBuf> {
   private static final int SERVERBOUND_UNCOMPRESSED_CAP =
           VelocityProperties.readBoolean("velocity.increased-compression-cap", true)
                   ? HARD_MAXIMUM_UNCOMPRESSED_SIZE : SERVERBOUND_MAXIMUM_UNCOMPRESSED_SIZE;
-  private static final boolean SKIP_COMPRESSION_VALIDATION = VelocityProperties.readBoolean("velocity.skip-uncompressed-packet-size-validation", true);
+  private static final boolean SKIP_COMPRESSION_VALIDATION =
+          VelocityProperties.readBoolean("velocity.skip-uncompressed-packet-size-validation", true);
   private final ProtocolUtils.Direction direction;
 
   private int threshold;
